@@ -24,10 +24,10 @@ export default function Home() {
         }
         {
           !user && (
-            <>
+            <div className="flex gap-5 p-5">
               <Link href="/api/auth/login" className="btn">Login</Link>
               <Link href="/api/auth/signup" className="btn">Signup</Link>
-            </>
+            </div>
           )
         }
         </div>

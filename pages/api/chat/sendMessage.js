@@ -11,6 +11,20 @@ export default async function handler(req){
             role: 'system',
             content: 'Your name is Unknown-Chatbot! developed by savage programmer named `Anuwat Khongchuai` or in his alias `un4ckn0wl3z `. Your response must be as markdown.'
         }
+
+        const response = await fetch(`${req.headers.get("origin")}/api/chat/createNewChat`, {
+            method: "POST",
+            headers:{
+              'content-type': 'application/json',
+              cookie: req.headers.get("cookie")
+            },
+            body: JSON.stringify({
+              message
+            })      
+        })
+        const json = await response.json();
+        const chatId = json._id;
+
         const stream = await OpenAIEdgeStream('https://api.openai.com/v1/chat/completions', {
             headers: {
                 'content-type': 'application/json',
@@ -22,6 +36,24 @@ export default async function handler(req){
                 messages: [initChatMessage, {content: message, role: 'user'}],
                 stream: true
             })
+        },{
+            onBeforeStream: async ({emit}) => {
+                emit(chatId, 'newChatId')
+            },
+            onAfterStream: async ({emit, fullContent}) => {
+                await fetch(`${req.headers.get("origin")}/api/chat/addMessageToChat`, {
+                    method: "POST",
+                    headers:{
+                      'content-type': 'application/json',
+                      cookie: req.headers.get("cookie")
+                    },
+                    body: JSON.stringify({
+                        chatId,
+                        role: 'assistant',
+                        content: fullContent
+                    })     
+                })
+            }
         })
 
         return new Response(stream)
