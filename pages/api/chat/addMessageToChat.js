@@ -36,6 +36,5 @@ export default async function handler(req, res){
         res.status(500).json({
             message: 'An error occurred when adding a message to a chat'
         })
-        console.log("AN ERROR OCCURED IN ADDMESSAGETOCHAT API:", error)
     }
 }

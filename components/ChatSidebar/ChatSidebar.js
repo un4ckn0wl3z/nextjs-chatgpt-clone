@@ -13,7 +13,6 @@ export const ChatSidebar = ({chatId}) => {
                 method: 'POST'
             })
             const json = await response.json()
-            console.log("CHAT LIST:", json)
             setChatList(json?.chats || [])
         }
         loadChatList()
@@ -24,7 +23,7 @@ export const ChatSidebar = ({chatId}) => {
             <div className="flex-1 overflow-auto bg-gray-950">
                 {
                  chatList.map((chat) => (
-                    <Link className={`side-menu-item ${chatId === chat._id ? "bg-gray-700 hover:bg-gray-700": ""}`} key={chat._id} href={`/chat/${chat._id}`}><FontAwesomeIcon icon={faMessage} />{chat.title}</Link>
+                    <Link className={`side-menu-item ${chatId === chat._id ? "bg-gray-700 hover:bg-gray-700": ""}`} key={chat._id} href={`/chat/${chat._id}`}><FontAwesomeIcon icon={faMessage} /><span title={chat.title} className="overflow-hidden text-ellipsis whitespace-nowrap">{chat.title}</span></Link>
                  ))   
                 }
             </div>

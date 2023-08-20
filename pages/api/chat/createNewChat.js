@@ -29,6 +29,5 @@ export default async function handler(req, res){
         res.status(500).json({
             message: 'An error occurred when creating a new chat'
         })
-        console.log("AN ERROR OCCURED IN CREATENEWCHAT API:", error)
     }
 }

@@ -24,6 +24,5 @@ export default async function handler(req, res){
         res.status(500).json({
             message: 'An error occurred when getting the chat list'
         })
-        console.log("AN ERROR OCCURED IN CREATENEWCHAT API:", error)
     }
 }

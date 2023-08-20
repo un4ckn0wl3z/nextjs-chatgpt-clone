@@ -5,16 +5,25 @@ import { useEffect, useState } from "react";
 import { streamReader } from 'openai-edge-stream'
 import {v4 as uuid} from 'uuid'
 import { useRouter } from "next/router";
+import { getSession } from "@auth0/nextjs-auth0";
+import clientPromise from "lib/mongodb";
+import { ObjectId } from "mongodb";
 
 
-export default function ChatPage({chatId}) {
+export default function ChatPage({chatId, title, messages = []}) {
 
   const [newChatId, setNewChatId] = useState(null);
   const [messageText, setMessageText] = useState("");
   const [incomingMessage, setIncomingMessage] = useState("");
   const [newChatMessages, setNewChatMessages] = useState([]);
   const [generatingResponse, setGeneratingResponse] = useState(false);
+  const [fullMessage, setFullMessage] = useState("")
   const router = useRouter();
+
+  useEffect(() => {
+    setNewChatMessages([])
+    setNewChatId(null)
+  }, [chatId])
 
   useEffect(() => {
     if(!generatingResponse && newChatId){
@@ -22,6 +31,20 @@ export default function ChatPage({chatId}) {
       router.push(`/chat/${newChatId}`)
     }
   }, [newChatId, generatingResponse, router])
+
+  useEffect(() => {
+    if(!generatingResponse && fullMessage){
+      setNewChatMessages((prev) => {
+        const newFullChatMessages = [...prev, {
+          _id: uuid(),
+          role: 'assistant',
+          content: fullMessage
+        }]
+        return newFullChatMessages;
+      })
+      setFullMessage("")
+    }
+  }, [generatingResponse, fullMessage])
 
   const handleSubmit = async (e) =>{
     e.preventDefault();
@@ -42,6 +65,7 @@ export default function ChatPage({chatId}) {
         'content-type': 'application/json'
       },
       body: JSON.stringify({
+        chatId,
         message: messageText
       })
     })
@@ -49,18 +73,23 @@ export default function ChatPage({chatId}) {
     if(!data) return;
 
     const reader = data.getReader();
+    let content = "";
     await streamReader(reader, (message) => {
       if(message.event === 'newChatId'){
         setNewChatId(message.content)
       }else{
         setIncomingMessage(s => `${s}${message.content}`)
+        content = content + message.content
       }
       
     })
-
+    setFullMessage(content)
+    setIncomingMessage("")
     setGeneratingResponse(false)
 
   }
+
+  const allMessages = [...messages, ...newChatMessages]
 
   return (
     <>
@@ -72,7 +101,7 @@ export default function ChatPage({chatId}) {
         <ChatSidebar chatId={chatId}/>
         <div className="bg-gray-700 flex flex-col overflow-hidden">
           <div className="flex-1 text-white overflow-scroll no-scrollbar">
-            {newChatMessages.map((message) =>  (
+            {allMessages.map((message) =>  (
               <Message key={message._id} role={message.role} content={message.content} />
             ))}
             {
@@ -99,9 +128,30 @@ export default function ChatPage({chatId}) {
 
 export const getServerSideProps = async (ctx) => {
   const chatId = ctx.params?.chatId?.[0] || null;
-  return {
-    props: {
-      chatId
+  
+  if(chatId){
+    const {user} = await getSession(ctx.req, ctx.res)
+    const client = await clientPromise;
+    const db = client.db("NextjsChatgpt")
+    const chat = await db.collection('chats').findOne({
+      userId: user.sub,
+      _id: new ObjectId(chatId)
+    })
+    return {
+      props: {
+        chatId,
+        title: chat.title,
+        messages: chat.messages.map(message => ({
+          ...message,
+          _id: uuid()
+        }))
+      }
     }
   }
+
+  return {
+    props: {}
+  }
+
+
 }
